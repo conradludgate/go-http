@@ -138,3 +138,30 @@ func ExampleJSON() {
 
 	// Output: 200: https://httpbin.org/anything/test1 {Hello World 1234}
 }
+
+func ExampleQueryValue() {
+	type ResponseBody struct {
+		Args map[string]string `json:"args"`
+	}
+
+	ctx := context.Background()
+
+	client := http.NewClient()
+	req := client.NewRequest(http.Get,
+		http.URLString("https://httpbin.org/get"),
+		http.QueryValue("foo", "abc"),
+		http.Query(url.Values{
+			"bar": []string{"def"},
+		}),
+	)
+
+	respBody := new(ResponseBody)
+	resp, err := req.Send(ctx, http.JSON(respBody))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%d: %s %s", resp.Status, respBody.Args["foo"], respBody.Args["bar"])
+
+	// Output: 200: abc def
+}

@@ -91,6 +91,33 @@ func (p pathOption) ModifyRequest(r *Request) error {
 	return nil
 }
 
+type queryOption struct {
+	values url.Values
+}
+
+// Query is an option to add query parameters onto a request
+func Query(values url.Values) queryOption {
+	return queryOption{values}
+}
+
+// QueryValue is an option to add a single query parameter onto a request
+func QueryValue(key, value string) queryOption {
+	return queryOption{values: url.Values{
+		key: []string{value},
+	}}
+}
+
+func (q queryOption) ModifyRequest(r *Request) error {
+	query := r.url.Query()
+	for k, vs := range q.values {
+		for _, v := range vs {
+			query.Add(k, v)
+		}
+	}
+	r.url.RawQuery = query.Encode()
+	return nil
+}
+
 type urlOption struct {
 	url *url.URL
 }
