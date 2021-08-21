@@ -65,6 +65,11 @@ func (c *Client) NewRequest(method Method, options ...RequestOption) *Request {
 		url:     c.baseURL,
 		headers: c.baseHeaders,
 	}
+
+	if req.headers == nil {
+		req.headers = stdhttp.Header{}
+	}
+
 	req.applyOptions(options...)
 
 	return &req

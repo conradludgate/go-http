@@ -90,9 +90,9 @@ func ExampleJSON() {
 	// Set the base url for the client
 	client := http.NewClient(http.URLString("https://hacker-news.firebaseio.com/"))
 
-	// make GET request to https://hacker-news.firebaseio.com/v0/item/8863
+	// make GET request to https://hacker-news.firebaseio.com/v0/item/8863.json
 	req := client.NewRequest(http.Get,
-		http.Path("v0", "item", "8863"),
+		http.Path("v0", "item", "8863.json"),
 	)
 
 	respBody := new(HNItem)
@@ -101,6 +101,6 @@ func ExampleJSON() {
 		panic(err)
 	}
 
-	// Outputs: 200: My YC app: Dropbox - Throw away your USB drive
+	// Output: 200: My YC app: Dropbox - Throw away your USB drive
 	fmt.Printf("%d: %s", resp.Status, respBody.Title)
 }
