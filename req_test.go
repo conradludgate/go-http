@@ -69,7 +69,7 @@ func TestReq(t *testing.T) {
 	}, respBody)
 }
 
-func ExampleJSON() {
+func ExampleRequest_Send() {
 	type HNItem struct {
 		ID         int64  `json:"id"`
 		Type       string `json:"type"`
@@ -101,6 +101,40 @@ func ExampleJSON() {
 		panic(err)
 	}
 
-	// Output: 200: My YC app: Dropbox - Throw away your USB drive
 	fmt.Printf("%d: %s", resp.Status, respBody.Title)
+
+	// Output: 200: My YC app: Dropbox - Throw away your USB drive
+}
+
+func ExampleJSON() {
+	type RequestBody struct {
+		Foo string
+		Bar int64
+	}
+	type ResponseBody struct {
+		URL  string      `json:"url"`
+		JSON RequestBody `json:"json"`
+	}
+
+	ctx := context.Background()
+
+	client := http.NewClient()
+	req := client.NewRequest(http.Post,
+		http.URLString("https://httpbin.org/anything"),
+		http.Path("test1"),
+		http.JSON(RequestBody{
+			Foo: "Hello World",
+			Bar: 1234,
+		}),
+	)
+
+	respBody := new(ResponseBody)
+	resp, err := req.Send(ctx, http.JSON(respBody))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%d: %s %v", resp.Status, respBody.URL, respBody.JSON)
+
+	// Output: 200: https://httpbin.org/anything/test1 {Hello World 1234}
 }
