@@ -1,2 +1,2 @@
 # go-http
-Efficient http request library for go
+Simple/Extensible http request library for go
