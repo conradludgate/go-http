@@ -6,47 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/jarcoal/httpmock"
-	"golang.org/x/oauth2"
 )
 
-func RegisterAuthResponse(apiKey, accessToken string) {
-	httpmock.RegisterResponder("POST", "http://localhost:27228/api/v1/token/terraform",
-		RespondWith(
-			JSON(oauth2.Token{AccessToken: accessToken, Expiry: time.Now().Add(time.Hour)}),
-			VerifyBasicAuth("SpotifyAuthProxy", apiKey),
-		),
-	)
-}
-
 type Verifier func(req *http.Request) error
-
-func VerifyBearer(accessToken string) Verifier {
-	return func(req *http.Request) error {
-		if req.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", accessToken) {
-			return errors.New("invalid access token")
-		}
-		return nil
-	}
-}
-
-func VerifyBasicAuth(username, password string) Verifier {
-	return func(req *http.Request) error {
-		user, pass, ok := req.BasicAuth()
-		if !ok {
-			return errors.New("missing auth")
-		}
-		if user != username || pass != password {
-			return errors.New("invalid auth")
-		}
-		return nil
-	}
-}
-
-type object map[string]interface{}
 
 func VerifyJSONBody(expected interface{}) Verifier {
 	return func(req *http.Request) error {

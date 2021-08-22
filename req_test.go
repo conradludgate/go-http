@@ -33,13 +33,13 @@ func TestReq(t *testing.T) {
 	ctx := context.Background()
 
 	httpmock.RegisterResponder("GET", "https://example.com/api/foo/bar",
-		RespondWith(JSON(object{
-			"Foo": "something",
-			"Bar": 234,
+		RespondWith(JSON(FooBar{
+			Foo: "something",
+			Bar: 234,
 		}),
-			VerifyJSONBody(object{
-				"Foo": "foo",
-				"Bar": 123,
+			VerifyJSONBody(FooBar{
+				Foo: "foo",
+				Bar: 123,
 			}),
 		))
 
@@ -57,12 +57,10 @@ func TestReq(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Equal(t, &http.Response{
-		Status: 200,
-		Headers: stdhttp.Header{
-			"Content-Type": []string{"application/json"},
-		},
-	}, resp)
+	assert.Equal(t, 200, resp.Status)
+	assert.Equal(t, stdhttp.Header{
+		"Content-Type": []string{"application/json"},
+	}, resp.Headers)
 	assert.Equal(t, FooBar{
 		Foo: "something",
 		Bar: 234,

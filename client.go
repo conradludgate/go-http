@@ -87,16 +87,42 @@ type ClientOption interface {
 	ModifyClient(*Client) error
 }
 
-func (u urlOption) ModifyClient(c *Client) error {
+func (u URLOption) ModifyClient(c *Client) error {
 	c.baseURL = u.url
 	return nil
 }
 
-func (u urlStringOption) ModifyClient(c *Client) error {
+func (u URLStringOption) ModifyClient(c *Client) error {
 	url, err := url.Parse(u.url)
 	if err != nil {
 		return err
 	}
 	c.baseURL = url
+	return nil
+}
+
+type RequestOptions struct {
+	options []RequestOption
+}
+
+func RequestMiddlewares(options ...RequestOption) RequestOptions {
+	return RequestOptions{options}
+}
+
+func (r RequestOptions) ModifyClient(c *Client) error {
+	c.requestMiddlewares = append(c.requestMiddlewares, r.options...)
+	return nil
+}
+
+type ResponseOptions struct {
+	options []ResponseOption
+}
+
+func ResponseMiddlewares(options ...ResponseOption) ResponseOptions {
+	return ResponseOptions{options}
+}
+
+func (r ResponseOptions) ModifyClient(c *Client) error {
+	c.responseMiddlewares = append(c.responseMiddlewares, r.options...)
 	return nil
 }

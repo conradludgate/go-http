@@ -24,11 +24,11 @@ func (req *Request) applyOptions(options ...RequestOption) error {
 	return nil
 }
 
-type jsonOption struct {
+type JSONOption struct {
 	v interface{}
 }
 
-func (j jsonOption) ModifyRequest(r *Request) error {
+func (j JSONOption) ModifyRequest(r *Request) error {
 	b := bytes.NewBuffer(nil)
 	if err := json.NewEncoder(b).Encode(j.v); err != nil {
 		return fmt.Errorf("cannot encode request body: %w", err)
@@ -37,20 +37,20 @@ func (j jsonOption) ModifyRequest(r *Request) error {
 }
 
 // JSON is an option to add a JSON Body to a request or to expect a JSON Body in a response
-func JSON(v interface{}) jsonOption {
-	return jsonOption{v}
+func JSON(v interface{}) JSONOption {
+	return JSONOption{v}
 }
 
-type headerOption struct {
+type HeaderOption struct {
 	key, value string
 }
 
 // Header is an option to add a HTTP header to a request
-func Header(key, value string) headerOption {
-	return headerOption{key, value}
+func Header(key, value string) HeaderOption {
+	return HeaderOption{key, value}
 }
 
-func (h headerOption) ModifyRequest(r *Request) error {
+func (h HeaderOption) ModifyRequest(r *Request) error {
 	if r.headers == nil {
 		r.headers = stdhttp.Header{}
 	}
@@ -58,11 +58,11 @@ func (h headerOption) ModifyRequest(r *Request) error {
 	return nil
 }
 
-type bodyOption struct {
+type BodyOption struct {
 	r io.Reader
 }
 
-func (b bodyOption) ModifyRequest(r *Request) error {
+func (b BodyOption) ModifyRequest(r *Request) error {
 	rc, ok := b.r.(io.ReadCloser)
 	if !ok && b.r != nil {
 		rc = io.NopCloser(b.r)
@@ -72,42 +72,44 @@ func (b bodyOption) ModifyRequest(r *Request) error {
 }
 
 // Body is an option to add a body to a request
-func Body(r io.Reader) bodyOption {
-	return bodyOption{r}
+func Body(r io.Reader) BodyOption {
+	return BodyOption{r}
 }
 
-type pathOption []string
+type PathOption struct {
+	segments []string
+}
 
 // Path is an option to add a path onto the base url of the request
-func Path(pathSegments ...string) pathOption {
-	return pathOption(pathSegments)
+func Path(pathSegments ...string) PathOption {
+	return PathOption{pathSegments}
 }
 
-func (p pathOption) ModifyRequest(r *Request) error {
+func (p PathOption) ModifyRequest(r *Request) error {
 	if r.url == nil {
 		return fmt.Errorf("cannot use path option because there's no base url")
 	}
-	r.url.Path = path.Join(append([]string{r.url.Path}, p...)...)
+	r.url.Path = path.Join(append([]string{r.url.Path}, p.segments...)...)
 	return nil
 }
 
-type queryOption struct {
+type QueryOption struct {
 	values url.Values
 }
 
 // Query is an option to add query parameters onto a request
-func Query(values url.Values) queryOption {
-	return queryOption{values}
+func Query(values url.Values) QueryOption {
+	return QueryOption{values}
 }
 
 // QueryValue is an option to add a single query parameter onto a request
-func QueryValue(key, value string) queryOption {
-	return queryOption{values: url.Values{
+func QueryValue(key, value string) QueryOption {
+	return QueryOption{values: url.Values{
 		key: []string{value},
 	}}
 }
 
-func (q queryOption) ModifyRequest(r *Request) error {
+func (q QueryOption) ModifyRequest(r *Request) error {
 	query := r.url.Query()
 	for k, vs := range q.values {
 		for _, v := range vs {
@@ -118,30 +120,30 @@ func (q queryOption) ModifyRequest(r *Request) error {
 	return nil
 }
 
-type urlOption struct {
+type URLOption struct {
 	url *url.URL
 }
 
 // URL is an option to set the url of the request
-func URL(url *url.URL) urlOption {
-	return urlOption{url}
+func URL(url *url.URL) URLOption {
+	return URLOption{url}
 }
 
-func (u urlOption) ModifyRequest(r *Request) error {
+func (u URLOption) ModifyRequest(r *Request) error {
 	r.url = u.url
 	return nil
 }
 
-type urlStringOption struct {
+type URLStringOption struct {
 	url string
 }
 
 // URL is an option to parse and set the url of the request
-func URLString(url string) urlStringOption {
-	return urlStringOption{url}
+func URLString(url string) URLStringOption {
+	return URLStringOption{url}
 }
 
-func (u urlStringOption) ModifyRequest(r *Request) error {
+func (u URLStringOption) ModifyRequest(r *Request) error {
 	url, err := url.Parse(u.url)
 	if err != nil {
 		return err

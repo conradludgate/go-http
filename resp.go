@@ -44,7 +44,7 @@ type ResponseOption interface {
 	ProcessResponse(*Response) error
 }
 
-func (j jsonOption) ProcessResponse(resp *Response) error {
+func (j JSONOption) ProcessResponse(resp *Response) error {
 	ct := resp.Headers.Get("Content-Type")
 	if ct != "" && !strings.HasPrefix(ct, "application/json") {
 		return fmt.Errorf("invalid Content-Type header, expected 'application/json', got %s", ct)
