@@ -3,6 +3,7 @@ package http_test
 import (
 	"context"
 	"fmt"
+	"io"
 	stdhttp "net/http"
 	"net/url"
 	"testing"
@@ -230,7 +231,7 @@ func TestQuery(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, 200, resp.Status)
 
-	b, err := resp.Bytes()
+	b, err := io.ReadAll(resp)
 	require.Nil(t, err)
 	assert.Equal(t, "correct", string(b))
 }

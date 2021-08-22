@@ -1,10 +1,8 @@
 package http
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	stdhttp "net/http"
 	"strings"
 )
@@ -12,31 +10,19 @@ import (
 type Response struct {
 	Headers stdhttp.Header
 	Status  int
-	Body    io.ReadCloser
-	bytes   []byte
+	body    responseReader
 }
 
-func (r *Response) Bytes() ([]byte, error) {
-	if r.bytes != nil {
-		return r.bytes, nil
-	}
+func (r *Response) Read(p []byte) (n int, err error) {
+	return r.body.Read(p)
+}
 
-	if r.Body == nil {
-		return nil, nil
-	}
+func (r *Response) Reset() {
+	r.body.Reset()
+}
 
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		return b, err
-	}
-
-	r.bytes = b
-	if err := r.Body.Close(); err != nil {
-		return b, err
-	}
-
-	r.Body = io.NopCloser(bytes.NewReader(b))
-	return b, nil
+func (r *Response) Close() error {
+	return r.body.Close()
 }
 
 // ResponseOption is the option type for responses
@@ -49,11 +35,7 @@ func (j JSONOption) ProcessResponse(resp *Response) error {
 	if ct != "" && !strings.HasPrefix(ct, "application/json") {
 		return fmt.Errorf("invalid Content-Type header, expected 'application/json', got %s", ct)
 	}
-	b, err := resp.Bytes()
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, j.v)
+	return json.NewDecoder(resp.body).Decode(j.v)
 }
 
 func (resp *Response) applyOptions(options ...ResponseOption) error {

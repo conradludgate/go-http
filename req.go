@@ -65,7 +65,7 @@ func (r *Request) Send(ctx context.Context, options ...ResponseOption) (*Respons
 	resp := Response{
 		Headers: stdresp.Header,
 		Status:  stdresp.StatusCode,
-		Body:    stdresp.Body,
+		body:    newResponseReader(stdresp.Body),
 	}
 
 	if err := resp.applyOptions(append(r.client.responseMiddlewares, options...)...); err != nil {
