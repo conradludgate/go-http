@@ -95,9 +95,7 @@ func ExampleRequest_Send() {
 	client := http.NewClient(http.URLString("https://hacker-news.firebaseio.com/"))
 
 	// make GET request to https://hacker-news.firebaseio.com/v0/item/8863.json
-	req := client.NewRequest(http.Get,
-		http.Path("v0", "item", "8863.json"),
-	)
+	req := client.Get(http.Path("v0", "item", "8863.json"))
 
 	respBody := new(HNItem)
 	resp, err := req.Send(ctx, http.JSON(respBody))
@@ -122,18 +120,20 @@ func ExampleJSON() {
 
 	ctx := context.Background()
 
+	reqBody := RequestBody{
+		Foo: "Hello World",
+		Bar: 1234,
+	}
+	respBody := new(ResponseBody)
+
 	client := http.NewClient()
-	req := client.NewRequest(http.Post,
+	resp, err := client.Post(
 		http.URLString("https://httpbin.org/anything"),
 		http.Path("test1"),
-		http.JSON(RequestBody{
-			Foo: "Hello World",
-			Bar: 1234,
-		}),
+		http.JSON(reqBody),
+	).Send(ctx,
+		http.JSON(respBody),
 	)
-
-	respBody := new(ResponseBody)
-	resp, err := req.Send(ctx, http.JSON(respBody))
 	if err != nil {
 		panic(err)
 	}
@@ -150,17 +150,18 @@ func ExampleQueryValue() {
 
 	ctx := context.Background()
 
+	respBody := new(ResponseBody)
+
 	client := http.NewClient()
-	req := client.NewRequest(http.Get,
+	resp, err := client.Get(
 		http.URLString("https://httpbin.org/get"),
 		http.QueryValue("foo", "abc"),
 		http.Query(url.Values{
 			"bar": []string{"def"},
 		}),
+	).Send(ctx,
+		http.JSON(respBody),
 	)
-
-	respBody := new(ResponseBody)
-	resp, err := req.Send(ctx, http.JSON(respBody))
 	if err != nil {
 		panic(err)
 	}
