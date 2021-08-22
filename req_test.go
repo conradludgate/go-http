@@ -163,3 +163,74 @@ func ExampleQueryValue() {
 
 	// Output: 200: abc def
 }
+
+func TestClientURLError(t *testing.T) {
+	client := http.NewClient(http.URLString(":invalid-url"))
+	ctx := context.Background()
+
+	resp, err := client.NewRequest(http.Get, http.Path("foo", "bar")).Send(ctx)
+
+	assert.EqualError(t, err, "request error: client error: parse \":invalid-url\": missing protocol scheme")
+	assert.Nil(t, resp)
+}
+
+func TestRequestURLError(t *testing.T) {
+	client := http.NewClient()
+	ctx := context.Background()
+
+	resp, err := client.NewRequest(http.Get, http.URLString(":invalid-url")).Send(ctx)
+
+	assert.EqualError(t, err, "request error: parse \":invalid-url\": missing protocol scheme")
+	assert.Nil(t, resp)
+}
+
+func TestPathError(t *testing.T) {
+	client := http.NewClient()
+	ctx := context.Background()
+
+	resp, err := client.NewRequest(http.Get, http.Path("foo", "bar")).Send(ctx)
+
+	assert.EqualError(t, err, "request error: cannot use path option because there's no base url")
+	assert.Nil(t, resp)
+
+	resp, err = client.NewRequest(http.Get, http.URLString("relative-url"), http.Path("foo", "bar")).Send(ctx)
+
+	assert.EqualError(t, err, "request error: cannot use path option because there's no base url")
+	assert.Nil(t, resp)
+}
+
+func TestJSONEncodeError(t *testing.T) {
+	client := http.NewClient()
+	ctx := context.Background()
+
+	resp, err := client.NewRequest(http.Get,
+		http.URLString("http://example.com"), http.Path("foo", "bar"),
+		http.JSON(make(chan bool)),
+	).Send(ctx)
+
+	assert.EqualError(t, err, "request error: cannot encode request body: json: unsupported type: chan bool")
+	assert.Nil(t, resp)
+}
+
+func TestQuery(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := http.NewClient()
+	ctx := context.Background()
+
+	httpmock.RegisterResponder("GET", "https://example.com/api?foo=bar",
+		httpmock.NewStringResponder(200, "correct"))
+
+	resp, err := client.NewRequest(http.Get,
+		http.URLString("https://example.com/api"),
+		http.QueryValue("foo", "bar"),
+	).Send(ctx)
+
+	require.Nil(t, err)
+	assert.Equal(t, 200, resp.Status)
+
+	b, err := resp.Bytes()
+	require.Nil(t, err)
+	assert.Equal(t, "correct", string(b))
+}

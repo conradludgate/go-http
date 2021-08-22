@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	stdhttp "net/http"
 	"net/url"
 
@@ -56,7 +57,7 @@ func (c *Client) With(options ...ClientOption) *Client {
 // NewRequest creates a new HTTP Request with the method and options provided
 func (c *Client) NewRequest(method Method, options ...RequestOption) *Request {
 	if c.err != nil {
-		return &Request{err: c.err}
+		return &Request{err: fmt.Errorf("client error: %w", c.err)}
 	}
 
 	req := Request{
@@ -66,11 +67,7 @@ func (c *Client) NewRequest(method Method, options ...RequestOption) *Request {
 		headers: c.baseHeaders,
 	}
 
-	if req.headers == nil {
-		req.headers = stdhttp.Header{}
-	}
-
-	req.applyOptions(options...)
+	req.err = req.applyOptions(options...)
 
 	return &req
 }
@@ -97,8 +94,7 @@ func (u URLStringOption) ModifyClient(c *Client) error {
 	if err != nil {
 		return err
 	}
-	c.baseURL = url
-	return nil
+	return URL(url).ModifyClient(c)
 }
 
 type RequestOptions struct {

@@ -33,7 +33,7 @@ func (j JSONOption) ModifyRequest(r *Request) error {
 	if err := json.NewEncoder(b).Encode(j.v); err != nil {
 		return fmt.Errorf("cannot encode request body: %w", err)
 	}
-	return r.applyOptions(Body(b), Header("Content-Type", "application/json"))
+	return r.applyOptions(Body(b), AddHeader("Content-Type", "application/json"))
 }
 
 // JSON is an option to add a JSON Body to a request or to expect a JSON Body in a response
@@ -42,19 +42,26 @@ func JSON(v interface{}) JSONOption {
 }
 
 type HeaderOption struct {
-	key, value string
+	headers stdhttp.Header
 }
 
-// Header is an option to add a HTTP header to a request
-func Header(key, value string) HeaderOption {
-	return HeaderOption{key, value}
+// AddHeader is an option to add a HTTP header to a request
+func AddHeader(key string, values ...string) HeaderOption {
+	return HeaderOption{stdhttp.Header{
+		key: values,
+	}}
 }
 
 func (h HeaderOption) ModifyRequest(r *Request) error {
 	if r.headers == nil {
-		r.headers = stdhttp.Header{}
+		r.headers = h.headers
+	} else {
+		for k, vs := range h.headers {
+			for _, v := range vs {
+				r.headers.Add(k, v)
+			}
+		}
 	}
-	r.headers.Add(h.key, h.value)
 	return nil
 }
 
@@ -86,7 +93,7 @@ func Path(pathSegments ...string) PathOption {
 }
 
 func (p PathOption) ModifyRequest(r *Request) error {
-	if r.url == nil {
+	if r.url == nil || r.url.Host == "" {
 		return fmt.Errorf("cannot use path option because there's no base url")
 	}
 	r.url.Path = path.Join(append([]string{r.url.Path}, p.segments...)...)
@@ -148,6 +155,5 @@ func (u URLStringOption) ModifyRequest(r *Request) error {
 	if err != nil {
 		return err
 	}
-	r.url = url
-	return nil
+	return URL(url).ModifyRequest(r)
 }

@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"io"
 	stdhttp "net/http"
 	"net/url"
@@ -34,7 +35,7 @@ func (r *Request) Error() error {
 // Send the HTTP Request, processing the response with the options provided
 func (r *Request) Send(ctx context.Context, options ...ResponseOption) (*Response, error) {
 	if r.err != nil {
-		return nil, r.err
+		return nil, fmt.Errorf("request error: %w", r.err)
 	}
 
 	if err := r.applyOptions(r.client.requestMiddlewares...); err != nil {
@@ -50,6 +51,10 @@ func (r *Request) Send(ctx context.Context, options ...ResponseOption) (*Respons
 		Header:     r.headers,
 		Body:       r.body,
 		Host:       r.url.Host,
+	}
+
+	if req.Header == nil {
+		req.Header = stdhttp.Header{}
 	}
 
 	stdresp, err := r.client.roundTripper().RoundTrip(req.WithContext(ctx))
