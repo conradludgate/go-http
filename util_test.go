@@ -46,6 +46,22 @@ func VerifyJSONBody(expected interface{}) Verifier {
 	}
 }
 
+func VerifyHeader(key string, values ...string) Verifier {
+	return func(req *http.Request) error {
+		vs := req.Header.Values(key)
+		if len(vs) != len(values) {
+			return fmt.Errorf("invalid headers. expected %+v, got %+v", values, vs)
+		}
+		for i, v := range vs {
+			if v != values[i] {
+				return fmt.Errorf("invalid headers. expected %+v, got %+v", values, vs)
+			}
+		}
+
+		return nil
+	}
+}
+
 func RespondWith(responder httpmock.Responder, verifiers ...Verifier) httpmock.Responder {
 	return func(req *http.Request) (*http.Response, error) {
 		for _, verifier := range verifiers {

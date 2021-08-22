@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io"
 	stdhttp "net/http"
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestResponse_Bytes_Reuse(t *testing.T) {
+func TestResponse_Body_Reset(t *testing.T) {
 	bodyBytes := []byte("foobarbaz")
 	body := bytes.NewReader(bodyBytes)
 
@@ -37,7 +38,7 @@ func (e errReader) Read(p []byte) (int, error) {
 	return 0, e.err
 }
 
-func TestResponse_Bytes_ReadError(t *testing.T) {
+func TestResponse_Body_ReadError(t *testing.T) {
 	resp := Response{
 		body: newResponseReader(io.NopCloser(errReader{fmt.Errorf("error reading data")})),
 	}
@@ -52,21 +53,14 @@ type errCloser struct {
 }
 
 func (e errCloser) Read(p []byte) (int, error) {
-	if e.r == nil {
-		return 0, io.EOF
-	}
-	n, err := e.r.Read(p)
-	if err != nil {
-		e.r = nil
-	}
-	return n, err
+	return e.r.Read(p)
 }
 
 func (e errCloser) Close() error {
 	return e.err
 }
 
-func TestResponse_Bytes_CloseError(t *testing.T) {
+func TestResponse_Body_CloseError(t *testing.T) {
 	bodyBytes := []byte("foobarbaz")
 	body := bytes.NewReader(bodyBytes)
 
@@ -78,6 +72,54 @@ func TestResponse_Bytes_CloseError(t *testing.T) {
 	}
 	err := resp.Close()
 	assert.EqualError(t, err, "error closing conn")
+}
+
+type nopCloser struct {
+	r      io.Reader
+	closed *bool
+}
+
+func (e nopCloser) Read(p []byte) (int, error) {
+	return e.r.Read(p)
+}
+
+func (e nopCloser) Close() error {
+	*e.closed = true
+	return nil
+}
+
+func TestResponse_Body_Close(t *testing.T) {
+	bodyBytes := []byte("foobarbaz")
+	body := bytes.NewReader(bodyBytes)
+
+	var closed bool
+
+	resp := Response{
+		body: newResponseReader(nopCloser{
+			body,
+			&closed,
+		}),
+	}
+	b, err := io.ReadAll(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, bodyBytes, b)
+	assert.True(t, closed)
+}
+
+func TestResponse_Body_Large(t *testing.T) {
+	body := io.LimitReader(rand.Reader, 4096)
+
+	resp := Response{
+		body: newResponseReader(io.NopCloser(body)),
+	}
+	b1, err := io.ReadAll(&resp)
+	require.NoError(t, err)
+	assert.Len(t, b1, 4096)
+
+	resp.Reset()
+	b2, err := io.ReadAll(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, b1, b2)
 }
 
 func TestResponse_JSON_Error_ContentType(t *testing.T) {

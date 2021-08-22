@@ -30,9 +30,6 @@ func TestReq(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	client := http.NewClient(http.URLString("https://example.com/api"))
-	ctx := context.Background()
-
 	httpmock.RegisterResponder("GET", "https://example.com/api/foo/bar",
 		RespondWith(JSON(FooBar{
 			Foo: "something",
@@ -42,7 +39,14 @@ func TestReq(t *testing.T) {
 				Foo: "foo",
 				Bar: 123,
 			}),
+			VerifyHeader("foo", "bar", "baz"),
 		))
+
+	client := http.NewClient(
+		http.URLString("https://example.com/api"),
+		http.Transport(stdhttp.DefaultTransport),
+	)
+	ctx := context.Background()
 
 	reqBody := FooBar{
 		Foo: "foo",
@@ -53,6 +57,7 @@ func TestReq(t *testing.T) {
 	resp, err := client.NewRequest(http.Get,
 		http.Path("foo", "bar"),
 		http.JSON(reqBody),
+		http.AddHeader("foo", "bar", "baz"),
 	).Send(ctx,
 		http.JSON(&respBody),
 	)

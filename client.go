@@ -36,10 +36,15 @@ func (c *Client) applyOptions(options ...ClientOption) error {
 }
 
 func (c *Client) copy() *Client {
-	c1 := copy.Must(copy.Copy(c)).(*Client)
-	if c1.transport == nil && c.transport != nil {
-		c1.transport = copy.Must(copy.Copy(c.transport)).(stdhttp.RoundTripper)
-	}
+	c1 := new(Client)
+
+	c1.baseURL = copy.Must(copy.Copy(c.baseURL)).(*url.URL)
+	c1.baseHeaders = copy.Must(copy.Copy(c.baseHeaders)).(stdhttp.Header)
+	c1.transport = copy.Must(copy.Copy(c.transport)).(stdhttp.RoundTripper)
+	c1.requestMiddlewares = copy.Must(copy.Copy(c.requestMiddlewares)).([]RequestOption)
+	c1.responseMiddlewares = copy.Must(copy.Copy(c.responseMiddlewares)).([]ResponseOption)
+	c1.err = c.err
+
 	return c1
 }
 
@@ -97,6 +102,19 @@ func (u URLStringOption) ModifyClient(c *Client) error {
 	return URL(url).ModifyClient(c)
 }
 
+func (h HeaderOption) ModifyClient(c *Client) error {
+	if c.baseHeaders == nil {
+		c.baseHeaders = h.headers
+	} else {
+		for k, vs := range h.headers {
+			for _, v := range vs {
+				c.baseHeaders.Add(k, v)
+			}
+		}
+	}
+	return nil
+}
+
 type RequestOptions struct {
 	options []RequestOption
 }
@@ -120,5 +138,18 @@ func ResponseMiddlewares(options ...ResponseOption) ResponseOptions {
 
 func (r ResponseOptions) ModifyClient(c *Client) error {
 	c.responseMiddlewares = append(c.responseMiddlewares, r.options...)
+	return nil
+}
+
+type TransportOption struct {
+	transport stdhttp.RoundTripper
+}
+
+func Transport(rt stdhttp.RoundTripper) TransportOption {
+	return TransportOption{rt}
+}
+
+func (t TransportOption) ModifyClient(c *Client) error {
+	c.transport = t.transport
 	return nil
 }
