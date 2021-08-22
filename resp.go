@@ -10,7 +10,7 @@ import (
 type Response struct {
 	Headers stdhttp.Header
 	Status  int
-	body    responseReader
+	body    *responseReader
 }
 
 func (r *Response) Read(p []byte) (n int, err error) {

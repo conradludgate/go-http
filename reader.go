@@ -39,14 +39,14 @@ type responseReader struct {
 	buffer *buffer
 }
 
-func newResponseReader(r io.ReadCloser) responseReader {
-	return responseReader{
+func newResponseReader(r io.ReadCloser) *responseReader {
+	return &responseReader{
 		reader: r,
 		buffer: new(buffer),
 	}
 }
 
-func (r responseReader) Read(p []byte) (n int, err error) {
+func (r *responseReader) Read(p []byte) (n int, err error) {
 	if r.buffer.Len() == 0 && r.reader != nil {
 		n, err = io.TeeReader(r.reader, r.buffer).Read(p)
 		if err != nil {
@@ -59,11 +59,11 @@ func (r responseReader) Read(p []byte) (n int, err error) {
 	}
 }
 
-func (r responseReader) Reset() {
+func (r *responseReader) Reset() {
 	r.buffer.Reset()
 }
 
-func (r responseReader) Close() error {
+func (r *responseReader) Close() error {
 	if r.reader != nil {
 		return r.reader.Close()
 	}
