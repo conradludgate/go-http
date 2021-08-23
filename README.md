@@ -1,9 +1,119 @@
 # go-http
-Simple/Extensible http request library for go
+Opinionated, convenient and extensible http request library for go
 
 [![GoDoc](https://godoc.org/github.com/conradludgate/go-http?status.svg)](http://godoc.org/github.com/conradludgate/go-http)
 ![latest version](https://img.shields.io/github/v/tag/conradludgate/go-http?label=version)
 [![code coverage](https://img.shields.io/codecov/c/gh/conradludgate/go-http)](https://app.codecov.io/gh/conradludgate/go-http/)
+
+## Why
+
+The Go standard library is great and provides an amazing http package. This is not intended to be a hard replacement, but an expansion.
+
+Let's say you're wrapping an API and you're sending a `POST` request with a `JSON` body, getting back some `JSON` data in the response.
+Using the std lib, that might look something like
+
+```go
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type APIClient struct {
+    baseURL    string
+    httpClient *http.Client
+}
+
+func (c *APIClient) SendSomeData(ctx context.Context, req SomeData) (*SomeResponse, error) {
+    url = c.baseURL + "/some/path"
+
+    b, err := json.Marshal(req)
+    if err != nil {
+        return nil, fmt.Errorf("error marshaling json body: %w", err)
+    }
+
+    body := bytes.NewReader(b)
+    req, err := http.NewRequestFromContext(ctx, http.MethodPost, url, body)
+    if err != nil {
+        return nil, fmt.Errorf("error creating request object: %w", err)
+    }
+
+    resp, err := c.httpClient.Do(req)
+    if err != nil {
+        return nil, fmt.Errorf("error sending http request: %w", err)
+    }
+
+    defer resp.Body.Close()
+    var respBody SomeResponse
+    if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+        return nil, fmt.Errorf("error decoding http response: %w", err)
+    }
+
+    return &respBody, nil
+}
+```
+
+That's quite a bit of code. How about instead we do something like this
+
+```go
+import (
+    "encoding/json"
+    "fmt"
+
+    "github.com/conradludgate/go-http"
+)
+
+type APIClient struct {
+    httpClient *http.Client
+}
+
+func (c *APIClient) SendSomeData(ctx context.Context, req SomeData) (*SomeResponse, error) {
+    var respBody SomeResponse
+
+    _, err := c.httpClient.Post(
+        http.Path("some", "path"),
+        http.JSON(req)
+    ).Send(ctx, http.JSON(&respBody))
+
+    if err != nil {
+        return nil, err
+    }
+
+    return &respBody, nil
+}
+```
+
+That's a lot simpler. But how? Let's break it down.
+
+First, how to we make the client?
+
+```go
+apiClient := &APIClient{
+    // Create a new http client
+    // It can accept many options, in this case we're setting
+    // a base URL from a string
+    http.NewClient(http.URLString("https://api.example.com/v1"))
+}
+```
+
+How does the request work?
+
+```go
+// Using the http client, make a post request
+c.httpClient.Post(
+    // relative to the base url provided, make the request to `/some/path`.
+    // eg `https://api.example.com/v1/some/path`
+    http.Path("some", "path"),
+    // Then add the `req` object as a JSON body to the request
+    http.JSON(req),
+).
+// send the request with the provided context
+Send(ctx,
+    // Check the response has an `application/json` content type
+    // and then decode the body into `respBody`
+    http.JSON(&respBody),
+)
+```
 
 ## Installation
 
