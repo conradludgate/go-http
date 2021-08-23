@@ -2,75 +2,81 @@ package http
 
 import (
 	stdhttp "net/http"
-	"net/url"
 )
 
 // ClientOption is the option type for clients
 type ClientOption interface {
-	ModifyClient(*Client) error
+	ModifyClient(*Client)
 }
 
-func (u URLOption) ModifyClient(c *Client) error {
-	c.baseURL = u.url
-	return nil
+func (u URLOption) ModifyClient(c *Client) {
+	PreRequestMiddlewares(u).ModifyClient(c)
 }
 
-func (u URLStringOption) ModifyClient(c *Client) error {
-	url, err := url.Parse(u.url)
-	if err != nil {
-		return err
-	}
-	return URL(url).ModifyClient(c)
+func (u URLStringOption) ModifyClient(c *Client) {
+	PreRequestMiddlewares(u).ModifyClient(c)
 }
 
-func (h HeaderOption) ModifyClient(c *Client) error {
-	if c.baseHeaders == nil {
-		c.baseHeaders = h.headers
-	} else {
-		for k, vs := range h.headers {
-			for _, v := range vs {
-				c.baseHeaders.Add(k, v)
-			}
-		}
-	}
-	return nil
+func (h HeaderOption) ModifyClient(c *Client) {
+	PreRequestMiddlewares(h).ModifyClient(c)
 }
 
-type RequestOptions struct {
+type PreRequestOptions struct {
 	options []RequestOption
 }
 
-func RequestMiddlewares(options ...RequestOption) RequestOptions {
-	return RequestOptions{options}
+func PreRequestMiddlewares(options ...RequestOption) PreRequestOptions {
+	return PreRequestOptions{options}
 }
 
-func (r RequestOptions) ModifyClient(c *Client) error {
-	c.requestMiddlewares = append(c.requestMiddlewares, r.options...)
-	return nil
+func (r PreRequestOptions) ModifyClient(c *Client) {
+	c.PreRequestMiddlewares = append(c.PreRequestMiddlewares, r.options...)
 }
 
-type ResponseOptions struct {
+type PostRequestOptions struct {
+	options []RequestOption
+}
+
+func PostRequestMiddlewares(options ...RequestOption) PostRequestOptions {
+	return PostRequestOptions{options}
+}
+
+func (r PostRequestOptions) ModifyClient(c *Client) {
+	c.PostRequestMiddlewares = append(c.PostRequestMiddlewares, r.options...)
+}
+
+type PreResponseOptions struct {
 	options []ResponseOption
 }
 
-func ResponseMiddlewares(options ...ResponseOption) ResponseOptions {
-	return ResponseOptions{options}
+func PreResponseMiddlewares(options ...ResponseOption) PreResponseOptions {
+	return PreResponseOptions{options}
 }
 
-func (r ResponseOptions) ModifyClient(c *Client) error {
-	c.responseMiddlewares = append(c.responseMiddlewares, r.options...)
-	return nil
+func (r PreResponseOptions) ModifyClient(c *Client) {
+	c.PreResponseMiddlewares = append(c.PreResponseMiddlewares, r.options...)
 }
 
-type TransportOption struct {
-	transport stdhttp.RoundTripper
+type PostResponseOptions struct {
+	options []ResponseOption
 }
 
-func Transport(rt stdhttp.RoundTripper) TransportOption {
-	return TransportOption{rt}
+func PostResponseMiddlewares(options ...ResponseOption) PostResponseOptions {
+	return PostResponseOptions{options}
 }
 
-func (t TransportOption) ModifyClient(c *Client) error {
-	c.transport = t.transport
-	return nil
+func (r PostResponseOptions) ModifyClient(c *Client) {
+	c.PostResponseMiddlewares = append(c.PostResponseMiddlewares, r.options...)
+}
+
+type BaseClientOption struct {
+	client *stdhttp.Client
+}
+
+func BaseClient(client *stdhttp.Client) BaseClientOption {
+	return BaseClientOption{client}
+}
+
+func (co BaseClientOption) ModifyClient(c *Client) {
+	c.baseClient = co.client
 }

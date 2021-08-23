@@ -3,14 +3,15 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	stdhttp "net/http"
 	"strings"
 )
 
 type Response struct {
-	Headers stdhttp.Header
-	Status  int
-	body    *responseReader
+	Headers    stdhttp.Header
+	StatusCode Status
+	body       *responseReader
 }
 
 func (r *Response) Read(p []byte) (n int, err error) {
@@ -45,4 +46,18 @@ func (resp *Response) applyOptions(options ...ResponseOption) error {
 		}
 	}
 	return nil
+}
+
+type BodyWriteOption struct {
+	w io.Writer
+}
+
+func (b BodyWriteOption) ProcessResponse(resp *Response) error {
+	_, err := io.Copy(b.w, resp)
+	return err
+}
+
+// Body is an option to add a body to a request
+func WriteBodyTo(w io.Writer) BodyWriteOption {
+	return BodyWriteOption{w}
 }

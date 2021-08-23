@@ -44,7 +44,7 @@ func TestReq(t *testing.T) {
 
 	client := http.NewClient(
 		http.URLString("https://example.com/api"),
-		http.Transport(stdhttp.DefaultTransport),
+		http.BaseClient(stdhttp.DefaultClient),
 	)
 	ctx := context.Background()
 
@@ -63,7 +63,7 @@ func TestReq(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.Status)
+	assert.Equal(t, http.Status(200), resp.StatusCode)
 	assert.Equal(t, stdhttp.Header{
 		"Content-Type": []string{"application/json"},
 	}, resp.Headers)
@@ -103,7 +103,7 @@ func ExampleRequest_Send() {
 		panic(err)
 	}
 
-	fmt.Printf("%d: %s", resp.Status, respBody.Title)
+	fmt.Printf("%d: %s", resp.StatusCode, respBody.Title)
 
 	// Output: 200: My YC app: Dropbox - Throw away your USB drive
 }
@@ -138,12 +138,12 @@ func ExampleJSON() {
 		panic(err)
 	}
 
-	fmt.Printf("%d: %s %v", resp.Status, respBody.URL, respBody.JSON)
+	fmt.Printf("%d: %s %v", resp.StatusCode, respBody.URL, respBody.JSON)
 
 	// Output: 200: https://httpbin.org/anything/test1 {Hello World 1234}
 }
 
-func ExampleQueryValue() {
+func ExampleParam() {
 	type ResponseBody struct {
 		Args map[string]string `json:"args"`
 	}
@@ -155,8 +155,8 @@ func ExampleQueryValue() {
 	client := http.NewClient()
 	resp, err := client.Get(
 		http.URLString("https://httpbin.org/get"),
-		http.QueryValue("foo", "abc"),
-		http.Query(url.Values{
+		http.Param("foo", "abc"),
+		http.Params(url.Values{
 			"bar": []string{"def"},
 		}),
 	).Send(ctx,
@@ -166,7 +166,7 @@ func ExampleQueryValue() {
 		panic(err)
 	}
 
-	fmt.Printf("%d: %s %s", resp.Status, respBody.Args["foo"], respBody.Args["bar"])
+	fmt.Printf("%d: %s %s", resp.StatusCode, respBody.Args["foo"], respBody.Args["bar"])
 
 	// Output: 200: abc def
 }
@@ -177,7 +177,7 @@ func TestClientURLError(t *testing.T) {
 
 	resp, err := client.NewRequest(http.Get, http.Path("foo", "bar")).Send(ctx)
 
-	assert.EqualError(t, err, "request error: client error: parse \":invalid-url\": missing protocol scheme")
+	assert.EqualError(t, err, "request error: parse \":invalid-url\": missing protocol scheme")
 	assert.Nil(t, resp)
 }
 
@@ -231,11 +231,11 @@ func TestQuery(t *testing.T) {
 
 	resp, err := client.NewRequest(http.Get,
 		http.URLString("https://example.com/api"),
-		http.QueryValue("foo", "bar"),
+		http.Param("foo", "bar"),
 	).Send(ctx)
 
 	require.Nil(t, err)
-	assert.Equal(t, 200, resp.Status)
+	assert.Equal(t, http.Status(200), resp.StatusCode)
 
 	b, err := io.ReadAll(resp)
 	require.Nil(t, err)

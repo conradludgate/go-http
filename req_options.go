@@ -53,12 +53,12 @@ func AddHeader(key string, values ...string) HeaderOption {
 }
 
 func (h HeaderOption) ModifyRequest(r *Request) error {
-	if r.headers == nil {
-		r.headers = h.headers
+	if r.Headers == nil {
+		r.Headers = h.headers
 	} else {
 		for k, vs := range h.headers {
 			for _, v := range vs {
-				r.headers.Add(k, v)
+				r.Headers.Add(k, v)
 			}
 		}
 	}
@@ -74,7 +74,7 @@ func (b BodyOption) ModifyRequest(r *Request) error {
 	if !ok && b.r != nil {
 		rc = io.NopCloser(b.r)
 	}
-	r.body = rc
+	r.Body = rc
 	return nil
 }
 
@@ -93,37 +93,37 @@ func Path(pathSegments ...string) PathOption {
 }
 
 func (p PathOption) ModifyRequest(r *Request) error {
-	if r.url == nil || r.url.Host == "" {
+	if r.URL == nil || r.URL.Host == "" {
 		return fmt.Errorf("cannot use path option because there's no base url")
 	}
-	r.url.Path = path.Join(append([]string{r.url.Path}, p.segments...)...)
+	r.URL.Path = path.Join(append([]string{r.URL.Path}, p.segments...)...)
 	return nil
 }
 
-type QueryOption struct {
+type ParamsOption struct {
 	values url.Values
 }
 
-// Query is an option to add query parameters onto a request
-func Query(values url.Values) QueryOption {
-	return QueryOption{values}
+// Params is an option to add query parameters onto a request
+func Params(values url.Values) ParamsOption {
+	return ParamsOption{values}
 }
 
-// QueryValue is an option to add a single query parameter onto a request
-func QueryValue(key, value string) QueryOption {
-	return QueryOption{values: url.Values{
-		key: []string{value},
+// Param is an option to add a single query parameter onto a request
+func Param(key string, values ...string) ParamsOption {
+	return ParamsOption{values: url.Values{
+		key: values,
 	}}
 }
 
-func (q QueryOption) ModifyRequest(r *Request) error {
-	query := r.url.Query()
+func (q ParamsOption) ModifyRequest(r *Request) error {
+	query := r.URL.Query()
 	for k, vs := range q.values {
 		for _, v := range vs {
 			query.Add(k, v)
 		}
 	}
-	r.url.RawQuery = query.Encode()
+	r.URL.RawQuery = query.Encode()
 	return nil
 }
 
@@ -137,7 +137,7 @@ func URL(url *url.URL) URLOption {
 }
 
 func (u URLOption) ModifyRequest(r *Request) error {
-	r.url = u.url
+	r.URL = u.url
 	return nil
 }
 
@@ -145,7 +145,7 @@ type URLStringOption struct {
 	url string
 }
 
-// URL is an option to parse and set the url of the request
+// URLString is an option to parse and set the url of the request
 func URLString(url string) URLStringOption {
 	return URLStringOption{url}
 }

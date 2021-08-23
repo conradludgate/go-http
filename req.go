@@ -11,17 +11,19 @@ import (
 type Method string
 
 const (
-	Get  Method = "GET"
-	Post Method = "POST"
+	Get    Method = "GET"
+	Post   Method = "POST"
+	Delete Method = "DELETE"
+	Put    Method = "PUT"
 )
 
 type Request struct {
-	client *Client
+	Client *Client
 
-	method  Method
-	url     *url.URL
-	body    io.ReadCloser
-	headers stdhttp.Header
+	Method  Method
+	URL     *url.URL
+	Body    io.ReadCloser
+	Headers stdhttp.Header
 
 	err error
 }
@@ -38,38 +40,39 @@ func (r *Request) Send(ctx context.Context, options ...ResponseOption) (*Respons
 		return nil, fmt.Errorf("request error: %w", r.err)
 	}
 
-	if err := r.applyOptions(r.client.requestMiddlewares...); err != nil {
+	if err := r.applyOptions(r.Client.PostRequestMiddlewares...); err != nil {
 		return nil, err
 	}
 
-	req := &stdhttp.Request{
-		Method:     string(r.method),
-		URL:        r.url,
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header:     r.headers,
-		Body:       r.body,
-		Host:       r.url.Host,
+	req, err := stdhttp.NewRequestWithContext(ctx, string(r.Method), r.URL.String(), r.Body)
+	if err != nil {
+		panic(err)
+	}
+	if r.Headers != nil {
+		req.Header = r.Headers
 	}
 
-	if req.Header == nil {
-		req.Header = stdhttp.Header{}
-	}
-
-	stdresp, err := r.client.roundTripper().RoundTrip(req.WithContext(ctx))
+	stdresp, err := r.Client.BaseClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := Response{
-		Headers: stdresp.Header,
-		Status:  stdresp.StatusCode,
-		body:    newResponseReader(stdresp.Body),
+		Headers:    stdresp.Header,
+		StatusCode: Status(stdresp.StatusCode),
+		body:       newResponseReader(stdresp.Body),
 	}
 
-	if err := resp.applyOptions(append(r.client.responseMiddlewares, options...)...); err != nil {
-		return nil, err
+	if err := resp.applyOptions(r.Client.PreResponseMiddlewares...); err != nil {
+		return &resp, err
+	}
+
+	if err := resp.applyOptions(options...); err != nil {
+		return &resp, err
+	}
+
+	if err := resp.applyOptions(r.Client.PostResponseMiddlewares...); err != nil {
+		return &resp, err
 	}
 
 	return &resp, nil
