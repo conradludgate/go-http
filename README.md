@@ -1,7 +1,7 @@
 # go-http
 Simple/Extensible http request library for go
 
-[![GoDoc](https://godoc.org/github.com/conradludgate/go-http?status.svg)](http://godoc.org/github.com/zmb3/spotify)
+[![GoDoc](https://godoc.org/github.com/conradludgate/go-http?status.svg)](http://godoc.org/github.com/conradludgate/go-http)
 ![latest version](https://img.shields.io/github/v/tag/conradludgate/go-http?label=version)
 [![code coverage](https://img.shields.io/codecov/c/gh/conradludgate/go-http)](https://app.codecov.io/gh/conradludgate/go-http/)
 
@@ -52,7 +52,7 @@ Once you have a client, you can create requests
 
 ```go
 // Create a GET request object to <base_url>/v1/healthz
-req := client.NewRequest(http.Get, http.Path("v1", "healthz"))
+req := client.Get(http.Path("v1", "healthz"))
 ```
 
 You can add a lot of options here too:
